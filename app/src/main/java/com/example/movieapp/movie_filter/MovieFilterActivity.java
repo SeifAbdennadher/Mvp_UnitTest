@@ -9,42 +9,39 @@ package com.example.movieapp.movie_filter;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.example.movieapp.R;
 import com.wdullaer.materialdatetimepicker.date.DatePickerDialog;
 
 import java.util.Calendar;
 
-import com.example.movieapp.R;
-
 import static com.example.movieapp.utils.Constants.KEY_RELEASE_FROM;
 import static com.example.movieapp.utils.Constants.KEY_RELEASE_TO;
 
-public class MovieFilterActivity extends AppCompatActivity {
+public class MovieFilterActivity extends AppCompatActivity implements MovieFilterContract.View {
 
 
     private TextView tvFromReleaseDate;
     private TextView tvToReleaseDate;
     private TextView tvClerAll;
 
-    private String fromDate = "";
-    private String toDate = "";
-
     private RelativeLayout rlMainLayout;
+
+    private MovieFilterContract.Presenter mPresenter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_movie_filter);
+        mPresenter = new MovieFilterPresenter(this);
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
@@ -53,14 +50,8 @@ public class MovieFilterActivity extends AppCompatActivity {
         setListeners();
 
         Intent mIntent = getIntent();
-        fromDate = mIntent.getStringExtra(KEY_RELEASE_FROM);
-        toDate = mIntent.getStringExtra(KEY_RELEASE_TO);
-
-        // If the data from import is not empty then set it release from and release to values
-        if (!fromDate.isEmpty() && !toDate.isEmpty()) {
-            tvFromReleaseDate.setText(fromDate);
-            tvToReleaseDate.setText(toDate);
-        }
+        mPresenter.onFromDateSelected(mIntent.getStringExtra(KEY_RELEASE_FROM));
+        mPresenter.onToDateSelected(mIntent.getStringExtra(KEY_RELEASE_TO));
     }
 
     /**
@@ -90,8 +81,7 @@ public class MovieFilterActivity extends AppCompatActivity {
                             public void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth) {
 
                                 String date = year + "-" + String.format("%02d", (monthOfYear + 1)) + "-" + String.format("%02d", dayOfMonth);
-                                fromDate = date;
-                                tvFromReleaseDate.setText(date);
+                                mPresenter.onFromDateSelected(date);
                             }
                         },
                         now.get(Calendar.YEAR),
@@ -113,8 +103,7 @@ public class MovieFilterActivity extends AppCompatActivity {
                             @Override
                             public void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth) {
                                 String date = year + "-" + String.format("%02d", (monthOfYear + 1)) + "-" + String.format("%02d", dayOfMonth);
-                                toDate = date;
-                                tvToReleaseDate.setText(date);
+                                mPresenter.onToDateSelected(date);
                             }
                         },
                         now.get(Calendar.YEAR),
@@ -128,41 +117,11 @@ public class MovieFilterActivity extends AppCompatActivity {
         tvClerAll.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                fromDate = "";
-                toDate = "";
-                tvFromReleaseDate.setText(getString(R.string.from));
-                tvToReleaseDate.setText(getString(R.string.to));
+                mPresenter.onClearAllClicked();
             }
         });
 
-        tvToReleaseDate.addTextChangedListener(twDates);
-        tvFromReleaseDate.addTextChangedListener(twDates);
     }
-
-    /**
-     * Handling the text change listeners on dates to hide/show clear all button.
-     */
-    private TextWatcher twDates = new TextWatcher() {
-        @Override
-        public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-        }
-
-        @Override
-        public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-        }
-
-        @Override
-        public void afterTextChanged(Editable editable) {
-
-            if (!fromDate.isEmpty() || !toDate.isEmpty()) {
-                tvClerAll.setVisibility(View.VISIBLE);
-            } else if (fromDate.isEmpty() && toDate.isEmpty()) {
-                tvClerAll.setVisibility(View.GONE);
-            }
-        }
-    };
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -175,21 +134,7 @@ public class MovieFilterActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.item_done:
-
-                if((fromDate.isEmpty() && !toDate.isEmpty()) || (!fromDate.isEmpty() && toDate.isEmpty())){
-                    Snackbar snackbar = Snackbar
-                            .make(rlMainLayout, getString(R.string.error_date_filter), Snackbar.LENGTH_LONG);
-                    snackbar.show();
-                    return true;
-                }
-
-                // Sending the return intent
-                Intent returnIntent = new Intent();
-                returnIntent.putExtra(KEY_RELEASE_FROM, fromDate);
-                returnIntent.putExtra(KEY_RELEASE_TO, toDate);
-                setResult(Activity.RESULT_OK, returnIntent);
-                finish();
-
+                mPresenter.onValidateClicked();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -200,5 +145,41 @@ public class MovieFilterActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         onBackPressed();
         return true;
+    }
+
+    @Override
+    public void showClearAll() {
+        tvClerAll.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void hideClearAll() {
+        tvClerAll.setVisibility(View.GONE);
+    }
+
+
+    @Override
+    public void updateFromTextView(String date) {
+        tvFromReleaseDate.setText(date);
+    }
+
+    @Override
+    public void updateToTextView(String date) {
+        tvToReleaseDate.setText(date);
+    }
+
+    @Override
+    public void showErrorSnackbar(String message) {
+        Snackbar snackbar = Snackbar.make(rlMainLayout, message, Snackbar.LENGTH_LONG);
+        snackbar.show();
+    }
+
+    @Override
+    public void popBackWithDates(String fromDate, String toDate) {
+        Intent returnIntent = new Intent();
+        returnIntent.putExtra(KEY_RELEASE_FROM, fromDate);
+        returnIntent.putExtra(KEY_RELEASE_TO, toDate);
+        setResult(Activity.RESULT_OK, returnIntent);
+        finish();
     }
 }

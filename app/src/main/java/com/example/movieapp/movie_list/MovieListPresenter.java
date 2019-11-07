@@ -6,9 +6,9 @@
  */
 package com.example.movieapp.movie_list;
 
-import java.util.List;
-
 import com.example.movieapp.model.Movie;
+
+import java.util.List;
 
 public class MovieListPresenter implements MovieListContract.Presenter, MovieListContract.Model.OnFinishedListener {
 
@@ -19,6 +19,11 @@ public class MovieListPresenter implements MovieListContract.Presenter, MovieLis
     public MovieListPresenter(MovieListContract.View movieListView) {
         this.movieListView = movieListView;
         movieListModel = new MovieListModel();
+    }
+
+    @Override
+    public void setMovieListModel(MovieListContract.Model model) {
+        this.movieListModel = model;
     }
 
     @Override

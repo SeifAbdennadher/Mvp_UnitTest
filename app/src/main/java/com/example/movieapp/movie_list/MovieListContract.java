@@ -7,9 +7,9 @@
 
 package com.example.movieapp.movie_list;
 
-import java.util.List;
-
 import com.example.movieapp.model.Movie;
+
+import java.util.List;
 
 public interface MovieListContract {
 
@@ -38,6 +38,8 @@ public interface MovieListContract {
     }
 
     interface Presenter {
+
+        void setMovieListModel(Model model);
 
         void onDestroy();
 
